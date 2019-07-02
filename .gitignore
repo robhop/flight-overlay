@@ -86,3 +86,9 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+
+# Movie files 
+*.MOV
+
+# IGC trac files
+*.IGC
