@@ -46,15 +46,39 @@ VideoModel.prototype.probe = function () {
 
 
 VideoModel.prototype.loadIGC = function (fileName) {
+    const self = this
     this.igcFile = IGCParser.parse(fs.readFileSync(fileName, 'utf8'))
-    let data = GeoJSON.parse({ line: this.igcFile.fixes.map(f => { return [f.longitude, f.latitude] }) }, { 'LineString': 'line' })
+    let data = GeoJSON.parse({ line: self.igcFile.fixes.map(f => { return [f.longitude, f.latitude] }) }, { 'LineString': 'line' })
     let projection = d3.geoMercator().fitSize([this.width, this.height], data);
     let path = d3.geoPath(projection)
     this.path = path
     return Promise.resolve(this)
 }
 
-VideoModel.prototype.generateImages = function () {
+
+VideoModel.prototype.generateFullPath = function (file) {
+    const self = this;
+    let data = GeoJSON.parse({ line: self.igcFile.fixes.map(f => { return [f.longitude, f.latitude] }) }, { 'LineString': 'line' })
+
+    let svg = new Path2D(self.path(data))
+
+    const canvas = Canvas.createCanvas(self.width, self.height)
+    const ctx = canvas.getContext('2d')
+    ctx.strokeStyle = 'white'
+    ctx.globalAlpha = 0.3
+    ctx.lineWidth = 3
+    ctx.stroke(svg)
+    self.ctxFullPath = ctx
+    if (file)
+        fs.writeFileSync(file, canvas.toBuffer())
+
+    return Promise.resolve(this);
+
+}
+
+
+VideoModel.prototype.generateImages = function (doIt, padding) {
+    if (!doIt) return Promise.resolve(this)
     const self = this
     return new Promise((resolve, reject) => {
 
@@ -62,13 +86,19 @@ VideoModel.prototype.generateImages = function () {
             if (err) return reject(err);
 
             self.cleanup = cleanup
-            console.log(path)
             self.tmppath = path
 
             let frame = 0
+            const blank = Canvas.createCanvas(self.width, self.height)
+            for (let index = 0; index <= padding; index++) {
+                frame = index
+
+                fs.writeFileSync(self.tmppath + '/frame' + ("00000" + frame).slice(-6) + '.png', blank.toBuffer())
+            }
+
             for (let index = 0; index < self.igcFile.fixes.length; index++) {
-                frame++
                 if (index == 0) continue
+                frame++
                 var points = self.igcFile.fixes.slice(0, index)
 
                 let d = GeoJSON.parse({ line: points.map(f => { return [f.longitude, f.latitude] }) }, { 'LineString': 'line' })
@@ -77,11 +107,15 @@ VideoModel.prototype.generateImages = function () {
 
                 const canvas = Canvas.createCanvas(self.width, self.height)
                 const ctx = canvas.getContext('2d')
+                ctx.putImageData(self.ctxFullPath.getImageData(0, 0, self.width, self.height), 0, 0)
+                ctx.globalAlpha = 1
+                ctx.lineWidth = 1
                 ctx.strokeStyle = 'red'
                 ctx.stroke(p)
 
                 fs.writeFileSync(self.tmppath + '/frame' + ("00000" + frame).slice(-6) + '.png', canvas.toBuffer())
             }
+            fs.writeFileSync(self.tmppath + '/frame' + ("00000" + (frame + 1)).slice(-6) + '.png', blank.toBuffer())
             resolve(self)
         })
     })
@@ -89,6 +123,7 @@ VideoModel.prototype.generateImages = function () {
 
 
 VideoModel.prototype.render = function (file) {
+    if (!file) return Promise.resolve(this)
     const self = this
     self.outFile = file
     return new Promise((resolve, reject) => {
@@ -117,7 +152,8 @@ VideoModel.prototype.render = function (file) {
 
 
 
-VideoModel.prototype.cleanup = function () {
+VideoModel.prototype.cleanup = function (doIt) {
+    if (!doIt) return Promise.resolve(this)
     const self = this
     this.cleanup()
     return Promise.resolve(this)
