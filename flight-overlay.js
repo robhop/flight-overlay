@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-const fs = require('fs')
-var ffmpeg = require('fluent-ffmpeg');
-const IGCParser = require('igc-parser')
+const ffmpeg = require('fluent-ffmpeg');
+const _ = require('lodash')
+const model = require('./videomodel')
 const argv = require('yargs') // eslint-disable-line
     .demandOption(['i', 's', 't'])
     .option('verbose', { alias: 'v', default: false })
@@ -11,10 +11,12 @@ const argv = require('yargs') // eslint-disable-line
     .argv
 
 console.log(argv)
-const igcFile = IGCParser.parse(fs.readFileSync(argv.igc, 'utf8'));
 
-
-ffmpeg.ffprobe(argv.source, (err, meta) => {
-    if (err) throw new Error('Unable to probe file:' + argv.source)
-    console.dir(meta)
-})
+model(argv.source)
+    .then((result) => result.probe())
+    .then((result) => result.loadIGC(argv.igc))
+    .then((result) => result.generateImages())
+    .then((result) => result.render(argv.target))
+    .then((result) => result.printInfo())
+    .then((result) => result.cleanup())
+    .catch((err) => console.log(err))
