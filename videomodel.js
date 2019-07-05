@@ -1,3 +1,4 @@
+//@ts-check
 const ffmpeg = require('fluent-ffmpeg');
 const _ = require('lodash')
 const IGCParser = require('igc-parser')
@@ -15,6 +16,10 @@ function VideoModel(file) {
     this.file = file
     this.height = 0
     this.width = 0
+    this.ctxFullPath = null
+    this.tmppath = null
+    this.outFile = null
+    this.cleanupfunc = null
 
     return Promise.resolve(this)
 }
@@ -85,7 +90,7 @@ VideoModel.prototype.generateImages = function (doIt, padding) {
         tmp.dir({ unsafeCleanup: true }, function _tempDirCreated(err, path, cleanup) {
             if (err) return reject(err);
 
-            self.cleanup = cleanup
+            self.cleanupfunc = cleanup
             self.tmppath = path
 
             let frame = 0
@@ -155,7 +160,7 @@ VideoModel.prototype.render = function (file) {
 VideoModel.prototype.cleanup = function (doIt) {
     if (!doIt) return Promise.resolve(this)
     const self = this
-    this.cleanup()
+    self.cleanupfunc()
     return Promise.resolve(this)
 }
 
