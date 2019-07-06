@@ -9,7 +9,7 @@ const GeoJSON = require('geojson');
 var tmp = require('tmp');
 require('canvas-5-polyfill')
 
-function VideoModel(file) {
+function VideoModel() {
     if (!(this instanceof VideoModel)) {
         return new VideoModel(file);
     }
