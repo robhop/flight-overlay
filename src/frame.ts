@@ -1,35 +1,45 @@
-const Canvas = require('canvas')
+import { ENGINE_METHOD_PKEY_ASN1_METHS } from "constants";
 
+const Canvas = require('canvas')
 
 interface Frame {
     id: number
-    canvas: any
-    ctx: any
+    paths: Path2D[]
 }
 
-
-interface FrameSet {
-    frames: Array<Frame>
-    newFrame(): Frame
+export interface CanvasContext {
+    canvas: any,
+    strokeStyle: string
+    lineWidth: number
+    stroke(path: Path2D): void
 }
 
-function newFrame(a: Array<Frame>, widht: number, height: number): Frame {
-    const c = Canvas.createCanvas(widht, height)
-    const f = {
-        id: a.length,
-        canvas: c,
-        ctx: c.getContext('2d')
+export class Frameset {
+    widht: number;
+    height: number
+    frames: Frame[];
+    constructor(widht: number, height: number) {
+        this.frames = new Array<Frame>()
+        this.widht = widht
+        this.height = height
+
     }
-    a.push(f)
-    return f
-}
 
+    addFrame(paths: Path2D[]) {
+        this.frames.push({ id: this.frames.length, paths: paths })
+    }
 
-export function newFrameSet(widht: number, height: number): FrameSet {
-    const a = new Array<Frame>()
-    return {
-        frames: a,
-        newFrame: () => newFrame(a, widht, height)
+    addFrames(count: number) {
+        for (let index = 0; index < count; index++) {
+            this.frames.push({ id: this.frames.length, paths: [] })
+        }
+    }
+
+    renderFrames(callback: (index: number, paths: Path2D[], ctx: CanvasContext) => void) {
+        for (let frame of this.frames) {
+            const canvas = Canvas.createCanvas(this.widht, this.height)
+            const ctx = canvas.getContext('2d')
+            callback(frame.id, frame.paths, ctx)
+        }
     }
 }
-

@@ -15,7 +15,9 @@ function probe(fileName) {
                 reject("Unable to resolve " + fileName);
             }
             else {
-                var t = meta.streams.filter(function (s) { return s.codec_type == 'video'; }).pop();
+                var t = meta.streams
+                    .filter(function (s) { return s.codec_type == 'video'; })
+                    .pop();
                 reseove(t);
             }
         });
